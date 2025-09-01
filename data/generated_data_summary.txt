@@ -1,0 +1,60 @@
+Dataset Summary
+==================================================
+
+Shape: (36500, 27)
+Date range: 2023-01-01 00:00:00 to 2023-12-31 00:00:00
+Number of SKUs: 100
+Number of categories: 5
+
+Columns:
+  - date: datetime64[ns]
+  - sku: object
+  - category: object
+  - base_price: float64
+  - discount_pct: float64
+  - actual_price: float64
+  - demand: float64
+  - true_elasticity: float64
+  - category_elasticity: float64
+  - day_of_week: int32
+  - day_of_month: int32
+  - week_of_year: object
+  - month: int32
+  - quarter: int32
+  - is_weekend: int64
+  - is_month_start: int64
+  - is_month_end: int64
+  - is_holiday: int64
+  - days_to_holiday: int64
+  - days_from_holiday: int64
+  - near_holiday: int64
+  - promo_buy_one_get_one: int64
+  - promo_seasonal: int64
+  - promo_clearance: int64
+  - promo_flash_sale: int64
+  - promo_loyalty: int64
+  - promo_discount: float64
+
+Numerical Features Summary:
+                                date  ...  promo_discount
+count                          36500  ...    36500.000000
+mean   2023-07-01 23:59:59.999999744  ...        0.110550
+min              2023-01-01 00:00:00  ...        0.000000
+25%              2023-04-02 00:00:00  ...        0.000000
+50%              2023-07-02 00:00:00  ...        0.000000
+75%              2023-10-01 00:00:00  ...        0.219734
+max              2023-12-31 00:00:00  ...        0.497527
+std                              NaN  ...        0.147405
+
+[8 rows x 24 columns]
+
+Elasticity Distribution:
+count    100.000000
+mean      -1.605362
+std        0.766971
+min       -3.406506
+25%       -2.235776
+50%       -1.515397
+75%       -0.982413
+max       -0.300000
+Name: true_elasticity, dtype: float64

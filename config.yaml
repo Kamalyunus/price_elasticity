@@ -1,0 +1,22 @@
+# Configuration file for Parametric Price Elasticity Model
+
+# Model Parameters
+model:
+  # Parametric elasticity model settings
+  regularization_strength: 0.1           # L2 regularization for hierarchical model
+  convergence_tolerance: 1e-6            # Convergence criterion
+  max_iterations: 10000                   # Maximum iterations for optimization
+  
+  # Normalization settings (as per paper recommendation)
+  use_normalization: true                 # Enable demand normalization before log transform
+  normalization_method: "category_mean"  # Options: "product_mean", "category_mean", "global_mean"
+
+# Training Parameters
+training:
+  test_split: 0.2                        # Fraction of data for testing
+  
+# Evaluation Parameters
+evaluation:
+  # Output settings
+  results_dir: "models/"                 # Directory to save trained models
+  save_model: true                       # Save trained model to disk

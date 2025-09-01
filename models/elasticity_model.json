@@ -1,0 +1,22 @@
+{
+  "training_file": "data/generated_data.csv",
+  "n_categories": 5,
+  "categories": [
+    "cat_0",
+    "cat_1",
+    "cat_2",
+    "cat_3",
+    "cat_4"
+  ],
+  "base_elasticity": -1.72195014592161,
+  "category_elasticities": {
+    "cat_0": -2.4421950212165955,
+    "cat_1": -1.5869848100392836,
+    "cat_2": -2.252068404921725,
+    "cat_3": -1.6978451344225234,
+    "cat_4": -2.3526075049293387
+  },
+  "regularization": 0.1,
+  "training_samples": 4240,
+  "test_samples": 1060
+}
