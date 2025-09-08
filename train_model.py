@@ -90,16 +90,23 @@ def main():
     # Train with config parameters
     forgetting_factor = config['model']['forgetting_factor']
     regularization = config['model']['regularization']
+    max_iter = config['optimization']['max_iter']
+    f_tol = config['optimization']['f_tol']
     
     print(f"\nTraining with Config Parameters:")
     print(f"  Forgetting factor (λ): {forgetting_factor}")
     print(f"  Regularization (α): {regularization}")
     print(f"  Baseline days: {config['model']['baseline_days']}")
+    print(f"  Max iterations: {max_iter}")
+    print(f"  Function tolerance: {f_tol}")
     
     model = PriceElasticityModel(
         forgetting_factor=forgetting_factor,
         regularization=regularization,
-        baseline_days=config['model']['baseline_days']
+        baseline_days=config['model']['baseline_days'],
+        max_iter=max_iter,
+        f_tol=f_tol,
+        config_path='config.yaml'
     )
     
     # Fit model

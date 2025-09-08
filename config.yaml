@@ -17,6 +17,12 @@ model:
   
   baseline_days: 7                      # Days of pre-promo baseline to use
 
+# Optimization Parameters
+optimization:
+  max_iter: 2000                        # Maximum iterations for L-BFGS-B optimizer
+  f_tol: 0.000000001                   # Function tolerance for convergence (1e-9)
+                                        # Lower values = stricter convergence
+
 # Training Parameters
 training:
   test_split: 0.2                       # Fraction of data for holdout testing

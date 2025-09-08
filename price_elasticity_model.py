@@ -24,9 +24,11 @@ Author: Enhanced implementation of Alibaba Group's KDD 2021 research
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 import pickle
 import logging
+import yaml
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -76,7 +78,8 @@ class PriceElasticityModel:
         >>> print(f"Predicted 25% discount lift: {lift:.2f}x")
     """
     
-    def __init__(self, forgetting_factor: float = 0.99, regularization: float = 0.1, baseline_days: int = 7):
+    def __init__(self, forgetting_factor: float = 0.99, regularization: float = 0.1, baseline_days: int = 7,
+                 max_iter: int = 2000, f_tol: float = 1e-9, config_path: Optional[str] = None):
         """
         Args:
             forgetting_factor (λ): Controls temporal decay rate (0 < λ ≤ 1)
@@ -85,7 +88,20 @@ class PriceElasticityModel:
                                   λ=0.90: fast decay (30-day half-life)
             regularization (α): L2 regularization strength (α ≥ 0)
             baseline_days: Number of days for pre-promo baseline calculation
+            max_iter: Maximum iterations for optimizer
+            f_tol: Function tolerance for convergence
+            config_path: Optional path to config.yaml file
         """
+        
+        # Load from config file if provided
+        if config_path and os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            forgetting_factor = config['model'].get('forgetting_factor', forgetting_factor)
+            regularization = config['model'].get('regularization', regularization)
+            baseline_days = config['model'].get('baseline_days', baseline_days)
+            max_iter = config['optimization'].get('max_iter', max_iter)
+            f_tol = config['optimization'].get('f_tol', f_tol)
         if not 0 < forgetting_factor <= 1:
             raise ValueError("forgetting_factor must be in (0, 1]")
         if regularization < 0:
@@ -96,6 +112,8 @@ class PriceElasticityModel:
         self.forgetting_factor = forgetting_factor  # λ tunable parameter
         self.regularization = regularization        # α in paper
         self.baseline_days = baseline_days          # baseline period length
+        self.max_iter = max_iter                    # optimizer max iterations
+        self.f_tol = f_tol                          # optimizer tolerance
         
         # Model parameters (to be learned)
         self.theta = None      # Category-specific elasticities
@@ -267,7 +285,7 @@ class PriceElasticityModel:
             init_params,
             method='L-BFGS-B',
             jac=paper_gradient,
-            options={'maxiter': 2000, 'ftol': 1e-9}
+            options={'maxiter': self.max_iter, 'ftol': self.f_tol}
         )
         
         if not result.success:
