@@ -1,22 +1,54 @@
-# Configuration file for Parametric Price Elasticity Model
+# Configuration for Price Elasticity Model
+# Enhanced daily paired approach with tunable forgetting factor
 
-# Model Parameters
+# Model Parameters  
 model:
-  # Parametric elasticity model settings
-  regularization_strength: 0.1           # L2 regularization for hierarchical model
-  convergence_tolerance: 1e-6            # Convergence criterion
-  max_iterations: 10000                   # Maximum iterations for optimization
+  # Core model settings
+  forgetting_factor: 0.995               # Temporal decay rate (λ): 0.90-0.999
+                                        # 0.90: Fast decay (7 days), fashion/seasonal
+                                        # 0.95: Medium decay (14 days), typical retail  
+                                        # 0.99: Slow decay (69 days), stable markets
+                                        # 0.995: Very slow (138 days), limited data
   
-  # Normalization settings (as per paper recommendation)
-  use_normalization: true                 # Enable demand normalization before log transform
-  normalization_method: "category_mean"  # Options: "product_mean", "category_mean", "global_mean"
+  regularization: 0.1                   # L2 regularization strength (α)
+                                        # 0.01: Light regularization, clean data
+                                        # 0.1: Standard (recommended) 
+                                        # 0.5: Strong regularization, noisy data
+  
+  baseline_days: 7                      # Days of pre-promo baseline to use
 
 # Training Parameters
 training:
-  test_split: 0.2                        # Fraction of data for testing
+  test_split: 0.2                       # Fraction of data for holdout testing
   
-# Evaluation Parameters
-evaluation:
-  # Output settings
-  results_dir: "models/"                 # Directory to save trained models
-  save_model: true                       # Save trained model to disk
+  # SKU-level requirements (sparse data friendly)
+  min_promo_periods_per_sku: 2          # Minimum promo periods per SKU (1 period = 1 paired sample)
+  
+  # Category-level requirements (key for joint estimation)
+  min_skus_per_category: 3              # Minimum SKUs per category
+  min_samples_per_category: 10          # Minimum paired samples per category
+
+# Data Requirements
+data:
+  required_columns:
+    - date                              # YYYY-MM-DD format
+    - sku                               # Product identifier
+    - category                          # Product category  
+    - discount_pct                      # Discount (0-1, e.g. 0.2 = 20% off)
+    - demand                            # Actual sales/demand
+    
+  quality_checks:
+    min_history_months: 3               # Minimum months of data (reduced for sparse data)
+    
+    # Sparse data scenario: Focus on category-level sufficiency
+    # Individual SKUs can have few promos, but category needs enough samples
+    
+# Output Settings
+output:
+  model_dir: "models/"                  # Directory for saved models
+  results_file: "elasticity_results.json"  # Training results summary
+  
+# Performance Targets
+performance:
+  target_test_r2: 0.7                  # Target test R² for validation
+  target_mape: 0.15                    # Target MAPE (15%) for predictions

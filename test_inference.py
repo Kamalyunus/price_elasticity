@@ -1,115 +1,96 @@
 """
-Test script for the trained elasticity model with realistic scenarios.
+Test script for the price elasticity model with production scenarios.
 """
 
 import pandas as pd
-from elasticity_inference import ElasticityInference
+import numpy as np
+from price_elasticity_model import PriceElasticityModel
 
 def main():
     print("=" * 60)
-    print("TESTING PARAMETRIC ELASTICITY MODEL")
+    print("TESTING PRICE ELASTICITY MODEL")
     print("=" * 60)
     
-    # Load the trained model
-    inference = ElasticityInference('models/elasticity_model.pkl')
+    try:
+        # Load the trained model
+        model = PriceElasticityModel.load('models/price_elasticity_model.pkl')
+        print("✅ Model loaded successfully")
+    except FileNotFoundError:
+        print("❌ Model not found. Please run train_model.py first.")
+        return
     
     # View model's elasticities
     print("\nTrained Category Elasticities:")
     print("-" * 40)
-    for cat in ['cat_0', 'cat_1', 'cat_2', 'cat_3', 'cat_4']:
-        elasticity = inference.model.get_elasticity(cat)
+    elasticities = model.get_elasticities()
+    for cat, elasticity in sorted(elasticities.items()):
         print(f"  {cat}: {elasticity:.4f}")
     
     # Test 1: Single prediction for each category
-    print("\nTest 1: Impact of 20% discount on 1000 unit base forecast")
-    print("-" * 40)
-    base_forecast = 1000
+    print("\nTest 1: Impact of 20% discount on different categories")
+    print("-" * 50)
     discount = 0.2  # 20% discount
     
-    for cat in ['cat_0', 'cat_1', 'cat_2', 'cat_3', 'cat_4']:
-        final = inference.predict(
-            base_forecast=base_forecast,
-            discount_pct=discount,
-            category=cat
-        )
-        lift = (final / base_forecast - 1) * 100
-        print(f"  {cat}: {final:.0f} units (+{lift:.1f}% demand lift)")
+    for cat in sorted(elasticities.keys()):
+        lift = model.predict_lift(discount, cat)
+        print(f"  {cat}: {lift:.2f}x lift ({(lift-1)*100:+.1f}% demand increase)")
     
-    # Test 2: Different discount levels for most elastic category
-    print("\nTest 2: Category 'cat_0' (most elastic) at different discounts")
-    print("-" * 40)
-    category = 'cat_0'  # Most elastic category
+    # Test 2: Production scenario with base forecasts
+    print(f"\nTest 2: Production Integration with Base Forecasts")
+    print("-" * 50)
     
-    for discount_pct in [0.0, 0.1, 0.2, 0.3, 0.5]:
-        final = inference.predict(
-            base_forecast=1000,
-            discount_pct=discount_pct,
-            category=category
-        )
-        print(f"  {discount_pct*100:>3.0f}% discount: {final:>5.0f} units")
+    scenarios = [
+        {'category': 'cat_0', 'base_forecast': 1000, 'discount': 0.15},
+        {'category': 'cat_1', 'base_forecast': 500, 'discount': 0.25},
+        {'category': 'cat_4', 'base_forecast': 2000, 'discount': 0.30},
+    ]
     
-    # Test 3: Batch processing with realistic data
-    print("\nTest 3: Batch Processing Multiple Products")
-    print("-" * 40)
+    for scenario in scenarios:
+        lift = model.predict_lift(scenario['discount'], scenario['category'])
+        final_forecast = scenario['base_forecast'] * lift
+        print(f"  {scenario['category']}: {scenario['base_forecast']} → "
+              f"{final_forecast:.0f} units ({scenario['discount']*100:.0f}% discount)")
     
+    # Test 3: Batch processing simulation
+    print(f"\nTest 3: Batch Processing Simulation")
+    print("-" * 50)
+    
+    # Create sample batch data
     batch_data = pd.DataFrame({
-        'product_id': ['P001', 'P002', 'P003', 'P004', 'P005'],
+        'sku': [f'SKU_{i:03d}' for i in range(5)],
         'category': ['cat_0', 'cat_1', 'cat_2', 'cat_3', 'cat_4'],
-        'base_forecast': [500, 1000, 750, 1200, 300],
-        'discount_pct': [0.15, 0.10, 0.25, 0.20, 0.30]
+        'base_forecast': [800, 1200, 600, 1500, 900],
+        'discount': [0.10, 0.20, 0.15, 0.25, 0.35]
     })
     
-    results = inference.predict_batch(batch_data)
-    
-    # Calculate revenue impact (assuming base prices)
-    base_prices = [50000, 30000, 40000, 25000, 60000]
-    results['base_price'] = base_prices
-    results['revenue_no_discount'] = results['base_forecast'] * results['base_price']
-    results['revenue_with_discount'] = (
-        results['final_forecast'] * 
-        results['base_price'] * 
-        (1 - results['discount_pct'])
+    # Apply model predictions
+    batch_data['lift'] = batch_data.apply(
+        lambda row: model.predict_lift(row['discount'], row['category']), 
+        axis=1
     )
-    results['revenue_change'] = (
-        (results['revenue_with_discount'] / results['revenue_no_discount'] - 1) * 100
-    )
+    batch_data['final_forecast'] = batch_data['base_forecast'] * batch_data['lift']
+    batch_data['lift_pct'] = (batch_data['lift'] - 1) * 100
     
-    print("\nProduct Performance:")
-    for _, row in results.iterrows():
-        print(f"  {row['product_id']} ({row['category']}):")
-        print(f"    Base: {row['base_forecast']:.0f} units")
-        print(f"    With {row['discount_pct']*100:.0f}% discount: {row['final_forecast']:.0f} units")
-        print(f"    Revenue impact: {row['revenue_change']:+.1f}%")
+    print(batch_data[['sku', 'category', 'base_forecast', 'discount', 'final_forecast', 'lift_pct']].to_string(index=False, float_format='%.0f'))
     
-    # Test 4: Counterfactual comparison
-    print("\nTest 4: Counterfactual Analysis")
-    print("-" * 40)
-    print("Question: What if we change from 10% to 20% discount?")
+    # Test 4: Different discount levels for one category
+    print(f"\nTest 4: Discount Sensitivity Analysis (cat_0)")
+    print("-" * 50)
     
-    # Current scenario: 10% discount
-    current_demand = inference.predict(
-        base_forecast=1000,
-        discount_pct=0.1,
-        category='cat_2',
-        base_discount_pct=0.0
-    )
+    discounts = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50]
+    print(f"{'Discount':<10} | {'Lift':<8} | {'% Increase':<12}")
+    print("-" * 35)
     
-    # New scenario: 20% discount
-    new_demand = inference.predict(
-        base_forecast=1000,
-        discount_pct=0.2,
-        category='cat_2',
-        base_discount_pct=0.0
-    )
+    for discount in discounts:
+        lift = model.predict_lift(discount, 'cat_0')
+        increase = (lift - 1) * 100
+        print(f"{discount*100:8.0f}% | {lift:7.2f}x | {increase:10.1f}%")
     
-    print(f"  Current (10% off): {current_demand:.0f} units")
-    print(f"  Proposed (20% off): {new_demand:.0f} units")
-    print(f"  Demand increase: +{new_demand - current_demand:.0f} units")
-    print(f"  Percentage lift: +{(new_demand/current_demand - 1)*100:.1f}%")
-    
-    print("\n" + "=" * 60)
-    print("TEST COMPLETE")
-    print("=" * 60)
+    print(f"\n✅ All tests completed successfully!")
+    print(f"\nModel ready for production use:")
+    print(f"  model = PriceElasticityModel.load('models/price_elasticity_model.pkl')")
+    print(f"  lift = model.predict_lift(discount_pct=0.25, category='YourCategory')")
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()
